@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SIPRO – Sistem Informasi Optimasi Produksi (LP Grafik)</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--tx:#1f2328;--mu:#6b7280;--bd:#e3e1d8;--ac:#b45309;--ac2:#0f766e;--ok:rgba(15,118,110,.18);color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--card:#222428;--tx:#ecebe6;--mu:#9aa0a6;--bd:#3a3d42;--ac:#f59e0b;--ac2:#2dd4bf;--ok:rgba(45,212,191,.2);color-scheme:dark}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0}h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mu);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:420px}
+th,td{padding:5px 4px;text-align:left;font-size:13px;border-bottom:1px solid var(--bd)}
+input,select{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:5px;width:100%;font:inherit;font-size:13px}
+td input{min-width:56px}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer;margin:6px 6px 0 0}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+canvas{width:100%;height:auto;aspect-ratio:1/0.8;display:block}
+.res{font-size:14px}.res b{color:var(--ac2)}
+.best{background:var(--ok)}
+.msg{padding:8px 10px;border-radius:8px;border:1px solid var(--ac);margin-top:8px}
+.leg{font-size:12px;color:var(--mu);display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+</style></head><body><main>
+<h1>SIPRO – Optimasi Produksi Roti</h1>
+<p class="sub">Studi kasus: Toko Roti “Sidoarjo Bakery” menentukan jumlah produksi harian Roti Tawar (X₁) dan Roti Manis (X₂) untuk laba maksimum, memakai metode Linear Programming Grafik.</p>
+
+<div class="card"><h2>1. Input Model</h2>
+<div class="wrap"><table><tr><th>Tujuan</th><th><select id="mode"><option value="max">Maksimumkan</option><option value="min">Minimumkan</option></select></th><th>X₁ Roti Tawar</th><th>X₂ Roti Manis</th></tr>
+<tr><td>Harga jual (ribu Rp)</td><td></td><td><input id="p1" type="number" value="10"></td><td><input id="p2" type="number" value="9"></td></tr><tr><td>Biaya bahan (ribu Rp)</td><td></td><td><input id="h1" type="number" value="4"></td><td><input id="h2" type="number" value="4"></td></tr><tr><td>Laba/unit (koef. Z)</td><td></td><td><input id="c1" type="number" value="6" readonly></td><td><input id="c2" type="number" value="5" readonly></td></tr></table></div>
+<div class="wrap"><table id="ct"><thead><tr><th>Kendala</th><th>X₁</th><th>X₂</th><th>Tanda</th><th>RHS</th><th></th></tr></thead><tbody></tbody></table></div>
+<button id="add" class="sec">+ Tambah kendala</button><button id="solve">Hitung &amp; Gambar</button><button id="reset" class="sec">Reset contoh</button>
+</div>
+
+<div class="grid">
+<div class="card"><h2>2. Grafik Daerah Layak</h2><canvas id="cv" width="640" height="512"></canvas>
+<div class="leg"><span>▨ daerah layak</span><span>— garis kendala</span><span>- - garis Z</span><span>● titik optimum</span></div></div>
+<div class="card res"><h2>3. Hasil &amp; Rekomendasi</h2><div id="out">Klik “Hitung &amp; Gambar”.</div></div>
+</div>
+</main>
+<script>
+const DEF={mode:'max',c:[6,5],k:[['Tepung (ons)',2,1,'<=',90],['Tenaga kerja (jam)',1,2,'<=',80],['Kapasitas oven (loyang)',1,1,'<=',50]]};
+const tb=document.querySelector('#ct tbody'),$=id=>document.getElementById(id);
+function row(n,a,b,s,r){const tr=document.createElement('tr');
+tr.innerHTML=`<td><input value="${n}"></td><td><input type="number" value="${a}"></td><td><input type="number" value="${b}"></td><td><select><option ${s=='<='?'selected':''} value="<=">≤</option><option ${s=='>='?'selected':''} value=">=">≥</option><option ${s=='='?'selected':''} value="=">=</option></select></td><td><input type="number" value="${r}"></td><td><button class="sec" onclick="this.closest('tr').remove()">✕</button></td>`;tb.appendChild(tr)}
+function load(){tb.innerHTML='';$('mode').value=DEF.mode;$('p1').value=10;$('h1').value=4;$('p2').value=9;$('h2').value=4;sync();DEF.k.forEach(k=>row(...k))}
+function sync(){$('c1').value=$('p1').value-$('h1').value;$('c2').value=$('p2').value-$('h2').value}
+function read(){return{mode:$('mode').value,c:[+$('c1').value,+$('c2').value],k:[...tb.rows].map(r=>{const i=r.querySelectorAll('input,select');return{n:i[0].value,a:+i[1].value,b:+i[2].value,s:i[3].value,r:+i[4].value}})}}
+function solve(){
+const m=read(),M=1e5,E=1e-7;
+const L=[...m.k.map(k=>({a:k.a,b:k.b,r:k.r,s:k.s,n:k.n})),{a:1,b:0,r:0,s:'>=',n:'X₁ ≥ 0'},{a:0,b:1,r:0,s:'>=',n:'X₂ ≥ 0'},{a:1,b:0,r:M,s:'<=',n:'box',box:1},{a:0,b:1,r:M,s:'<=',n:'box',box:1}];
+const ok=(x,y)=>L.every(l=>{const v=l.a*x+l.b*y;return l.s=='<='?v<=l.r+E:l.s=='>='?v>=l.r-E:Math.abs(v-l.r)<1e-5});
+let P=[];
+for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const A=L[i],B=L[j],d=A.a*B.b-B.a*A.b;if(Math.abs(d)<E)continue;
+const x=(A.r*B.b-B.r*A.b)/d,y=(A.a*B.r-B.a*A.r)/d;if(ok(x,y)&&!P.some(p=>Math.abs(p.x-x)<1e-6&&Math.abs(p.y-y)<1e-6))P.push({x,y,z:m.c[0]*x+m.c[1]*y})}
+const out=$('out');
+if(!P.length){out.innerHTML='<div class="msg">Tidak ada titik layak: model <b>tidak memiliki solusi</b> (kendala saling bertentangan).</div>';draw(m,L,[],null);return}
+P.sort((p,q)=>m.mode=='max'?q.z-p.z:p.z-q.z);const best=P[0];
+const unb=P.some(p=>(p.x>=M-1||p.y>=M-1))&&(best.x>=M-1||best.y>=M-1);
+let h='';
+if(unb)h+='<div class="msg">Daerah layak tidak terbatas pada arah tujuan: solusi optimum <b>tak terbatas</b>.</div>';
+else{h+=`<p>Solusi optimum: <b>X₁ = ${f(best.x)}</b>, <b>X₂ = ${f(best.y)}</b><br>Nilai Z = <b>${f(best.z)}</b> (ribu Rp)</p>`;
+h+=`<p>Rekomendasi: produksi <b>${f(best.x)}</b> Roti Tawar dan <b>${f(best.y)}</b> Roti Manis per hari untuk ${m.mode=='max'?'laba maksimum':'biaya minimum'} Rp ${f(best.z*1000)}.</p>`}
+const real=P.filter(p=>p.x<M-1&&p.y<M-1);
+h+='<div class="wrap"><table><tr><th>Titik sudut</th><th>X₁</th><th>X₂</th><th>Z</th></tr>'+real.map((p,i)=>`<tr class="${p===best?'best':''}"><td>${String.fromCharCode(65+i)}</td><td>${f(p.x)}</td><td>${f(p.y)}</td><td>${f(p.z)}</td></tr>`).join('')+'</table></div>';
+if(!unb){h+='<p style="color:var(--mu);font-size:13px">Pemakaian sumber daya di titik optimum:</p><ul style="margin:0;padding-left:18px;font-size:13px">'+m.k.map(k=>{const u=k.a*best.x+k.b*best.y,sl=k.r-u;return `<li>${k.n}: ${f(u)} / ${f(k.r)} ${Math.abs(sl)<1e-6?'(habis, kendala aktif)':'(sisa '+f(sl)+')'}</li>`}).join('')+'</ul>'}
+out.innerHTML=h;draw(m,L,real,unb?null:best)}
+const f=v=>(Math.round(v*100)/100).toLocaleString('id-ID');
+function draw(m,L,V,best){
+const cv=$('cv'),g=cv.getContext('2d'),W=cv.width,H=cv.height,pd=50;
+const cs=getComputedStyle(document.documentElement),tx=cs.getPropertyValue('--tx'),mu=cs.getPropertyValue('--mu'),ac=cs.getPropertyValue('--ac'),ac2=cs.getPropertyValue('--ac2'),ok=cs.getPropertyValue('--ok'),bd=cs.getPropertyValue('--bd');
+g.clearRect(0,0,W,H);
+let mx=10;m.k.forEach(k=>{if(k.a>0)mx=Math.max(mx,k.r/k.a);});V.forEach(p=>mx=Math.max(mx,p.x));
+let my=10;m.k.forEach(k=>{if(k.b>0)my=Math.max(my,k.r/k.b);});V.forEach(p=>my=Math.max(my,p.y));
+mx*=1.1;my*=1.1;const X=x=>pd+x/mx*(W-pd-15),Y=y=>H-pd-y/my*(H-pd-15);
+g.font='12px system-ui';g.fillStyle=mu;g.strokeStyle=bd;g.lineWidth=1;
+for(let i=0;i<=5;i++){const x=mx*i/5,y=my*i/5;g.beginPath();g.moveTo(X(x),Y(0));g.lineTo(X(x),Y(my));g.moveTo(X(0),Y(y));g.lineTo(X(mx),Y(y));g.stroke();g.fillText(f(x),X(x)-8,H-pd+16);g.fillText(f(y),8,Y(y)+4)}
+g.fillStyle=tx;g.fillText('X₁',W-24,H-pd+32);g.fillText('X₂',pd-30,14);
+g.save();g.beginPath();g.rect(pd,10,W-pd-5,H-pd-10);g.clip();
+if(V.length>2){const cx=V.reduce((s,p)=>s+p.x,0)/V.length,cy=V.reduce((s,p)=>s+p.y,0)/V.length;
+const S=[...V].sort((p,q)=>Math.atan2(p.y-cy,p.x-cx)-Math.atan2(q.y-cy,q.x-cx));
+g.fillStyle=ok;g.beginPath();S.forEach((p,i)=>i?g.lineTo(X(p.x),Y(p.y)):g.moveTo(X(p.x),Y(p.y)));g.closePath();g.fill()}
+const cols=['#dc2626','#2563eb','#9333ea','#ea580c','#0891b2','#65a30d'];
+m.k.forEach((k,i)=>{g.strokeStyle=cols[i%6];g.lineWidth=2;g.beginPath();
+let p1,p2;if(Math.abs(k.b)>1e-9){p1=[-mx*5,(k.r+k.a*mx*5)/k.b];p2=[mx*5,(k.r-k.a*mx*5)/k.b]}else{p1=[k.r/k.a,-my*5];p2=[k.r/k.a,my*5]}
+g.moveTo(X(p1[0]),Y(p1[1]));g.lineTo(X(p2[0]),Y(p2[1]));g.stroke()});
+if(best&&(m.c[0]||m.c[1])){g.strokeStyle=ac;g.setLineDash([6,5]);g.lineWidth=2;g.beginPath();const z=best.z,c=m.c;let p1,p2;
+if(Math.abs(c[1])>1e-9){p1=[-mx*5,(z+c[0]*mx*5)/c[1]];p2=[mx*5,(z-c[0]*mx*5)/c[1]]}else{p1=[z/c[0],-my*5];p2=[z/c[0],my*5]}
+g.moveTo(X(p1[0]),Y(p1[1]));g.lineTo(X(p2[0]),Y(p2[1]));g.stroke();g.setLineDash([])}
+g.restore();
+V.forEach((p,i)=>{g.fillStyle=p===best?ac2:tx;g.beginPath();g.arc(X(p.x),Y(p.y),p===best?7:4,0,7);g.fill();g.fillStyle=tx;g.fillText(String.fromCharCode(65+i),X(p.x)+8,Y(p.y)-8)});
+m.k.forEach((k,i)=>{const lg=$('cv').parentNode.querySelector('.leg');});
+const lg=cv.parentNode.querySelector('.leg');lg.innerHTML='<span>▨ daerah layak</span><span>- - garis Z</span><span>● optimum</span>'+m.k.map((k,i)=>`<span style="color:${cols[i%6]}">— ${k.n}</span>`).join('')}
+$('add').onclick=()=>row('Kendala baru',1,1,'<=',100);
+$('solve').onclick=solve;$('reset').onclick=()=>{load();solve()};
+['p1','h1','p2','h2'].forEach(i=>$(i).addEventListener('input',sync));
+load();solve();
+</script></body></html>
